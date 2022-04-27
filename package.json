@@ -1,6 +1,6 @@
 {
   "name": "@infinitywallet/infinity-connector",
-  "description": "Core contracts for the Infinity protocol",
+  "description": "Infinity Wallet connection SDK for DApp web3 connect integration",
   "version": "1.0.0",
   "homepage": "https://infinitywallet.io",
   "author": "Infinity Wallet",
