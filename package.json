@@ -1,9 +1,29 @@
 {
+  "name": "@infinitywallet/infinity-connector",
+  "description": "Core contracts for the Infinity protocol",
+  "version": "1.0.0",
+  "homepage": "https://infinitywallet.io",
+  "author": "Infinity Wallet",
+  "keywords": [
+    "infinity wallet",
+    "infinity connect",
+    "infinity",
+    "web3",
+    "web3 connect",
+    "wallet connect",
+    "wallet provider",
+    "ethereum",
+    "bnbchain",
+    "polygon",
+    "harmony"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/InfinityWallet/infinity-connector"
+  },
+  "main": "index.js",
   "dependencies": {
     "@web3-react/types": "^6.0.7"
   },
-  "name": "infinity-connector",
-  "version": "1.0.0",
-  "main": "index.js",
   "license": "MIT"
 }
