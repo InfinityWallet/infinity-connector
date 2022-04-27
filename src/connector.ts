@@ -1,178 +1,207 @@
-import type {
-  detectEthereumProvider,
-  openInfinityWallet
-} from './src/detect-provider'
-import type {
-  Actions,
-  AddEthereumChainParameter,
-  Provider,
-  ProviderConnectInfo,
-  ProviderRpcError,
-} from '@web3-react/types'
-import { Connector } from '@web3-react/types'
+import { AbstractConnectorArguments, ConnectorUpdate } from '@web3-react/types'
+import { AbstractConnector } from '@web3-react/abstract-connector'
+import warning from 'tiny-warning'
 
-type InfinityWalletProvider = Provider & { isInfinityWallet?: boolean; isConnected?: () => boolean; providers?: InfinityWalletProvider[] }
+import { SendReturnResult, SendReturn, Send, SendOld } from './types'
 
-export class NoInfinityWalletError extends Error {
+function parseSendReturn(sendReturn: SendReturnResult | SendReturn): any {
+  return sendReturn.hasOwnProperty('result') ? sendReturn.result : sendReturn
+}
+
+export class NoEthereumProviderError extends Error {
   public constructor() {
-    super('InfinityWallet not installed')
-    this.name = NoInfinityWalletError.name
-    Object.setPrototypeOf(this, NoInfinityWalletError.prototype)
-
+    super()
+    this.name = this.constructor.name
+    this.message = 'No Ethereum provider was found on window.ethereum.'
   }
 }
 
-
-function parseChainId(chainId: string) {
-  return Number.parseInt(chainId, 16)
+export class UserRejectedRequestError extends Error {
+  public constructor() {
+    super()
+    this.name = this.constructor.name
+    this.message = 'The user rejected the request.'
+  }
 }
 
-export class InfinityWallet extends Connector {
-  /** {@inheritdoc Connector.provider} */
-  public provider: InfinityWalletProvider | undefined
+export class InfinityWalletConnector extends AbstractConnector {
+  constructor(kwargs: AbstractConnectorArguments) {
+    super(kwargs)
+    this.isInfinityWallet = true
+    this.handleNetworkChanged = this.handleNetworkChanged.bind(this)
+    this.handleChainChanged = this.handleChainChanged.bind(this)
+    this.handleAccountsChanged = this.handleAccountsChanged.bind(this)
+    this.handleClose = this.handleClose.bind(this)
+  }
 
-  private readonly options?: Parameters<typeof detectEthereumProvider>[0]
-  private eagerConnection?: Promise<void>
+  private handleChainChanged(chainId: string | number): void {
+    if (__DEV__) {
+      console.log("Handling 'chainChanged' event with payload", chainId)
+    }
+    this.emitUpdate({ chainId, provider: window.ethereum })
+  }
 
-  /**
-   * @param connectEagerly - A flag indicating whether connection should be initiated when the class is constructed.
-   * @param options - Options to pass to `@infinitywallet/detect-provider`
-   */
-  constructor(actions: Actions, connectEagerly = false, options?: Parameters<typeof detectEthereumProvider>[0]) {
-    super(actions)
+  private handleAccountsChanged(accounts: string[]): void {
+    if (__DEV__) {
+      console.log("Handling 'accountsChanged' event with payload", accounts)
+    }
+    if (accounts.length === 0) {
+      this.emitDeactivate()
+    } else {
+      this.emitUpdate({ account: accounts[0] })
+    }
+  }
 
-    if (connectEagerly && typeof window === 'undefined') {
-      throw new Error('connectEagerly = true is invalid for SSR, instead use the connectEagerly method in a useEffect')
+  private handleClose(code: number, reason: string): void {
+    if (__DEV__) {
+      console.log("Handling 'close' event with payload", code, reason)
+    }
+    this.emitDeactivate()
+  }
+
+  private handleNetworkChanged(networkId: string | number): void {
+    if (__DEV__) {
+      console.log("Handling 'networkChanged' event with payload", networkId)
+    }
+    this.emitUpdate({ chainId: networkId, provider: window.ethereum })
+  }
+
+  public async activate(): Promise<ConnectorUpdate> {
+    if (!window.ethereum) {
+      throw new NoEthereumProviderError()
     }
 
-    this.options = options
+    if (window.ethereum.on) {
+      window.ethereum.on('chainChanged', this.handleChainChanged)
+      window.ethereum.on('accountsChanged', this.handleAccountsChanged)
+      window.ethereum.on('close', this.handleClose)
+      window.ethereum.on('networkChanged', this.handleNetworkChanged)
+    }
 
-    if (connectEagerly) void this.connectEagerly()
+    if ((window.ethereum as any).isInfinityWallet) {
+      ;(window.ethereum as any).autoRefreshOnNetworkChange = false
+    }
+
+    // try to activate + get account via eth_requestAccounts
+    let account
+    try {
+      account = await (window.ethereum.send as Send)('eth_requestAccounts').then(
+        sendReturn => parseSendReturn(sendReturn)[0]
+      )
+    } catch (error) {
+      if ((error as any).code === 4001) {
+        throw new UserRejectedRequestError()
+      }
+      warning(false, 'eth_requestAccounts was unsuccessful, falling back to enable')
+    }
+
+    // if unsuccessful, try enable
+    if (!account) {
+      // if enable is successful but doesn't return accounts, fall back to getAccount (not happy i have to do this...)
+      account = await window.ethereum.enable().then(sendReturn => sendReturn && parseSendReturn(sendReturn)[0])
+    }
+
+    return { provider: window.ethereum, ...(account ? { account } : {}) }
   }
 
-  private async isomorphicInitialize(): Promise<void> {
-    if (this.eagerConnection) return this.eagerConnection
-
-    await (this.eagerConnection = import('@infinitywallet/detect-provider')
-      .then((m) => m.default(this.options))
-      .then((provider) => {
-        if (provider) {
-          this.provider = provider as InfinityWalletProvider
-
-          // edge case if e.g. infinitywallet and coinbase wallet are both installed
-          if (this.provider.providers?.length) {
-            this.provider = this.provider.providers.find((p) => p.isInfinityWallet) ?? this.provider.providers[0]
-          }
-
-          this.provider.on('connect', ({ chainId }: ProviderConnectInfo): void => {
-            this.actions.update({ chainId: parseChainId(chainId) })
-          })
-
-          this.provider.on('disconnect', (error: ProviderRpcError): void => {
-            this.actions.reportError(error)
-          })
-
-          this.provider.on('chainChanged', (chainId: string): void => {
-            this.actions.update({ chainId: parseChainId(chainId) })
-          })
-
-          this.provider.on('accountsChanged', (accounts: string[]): void => {
-            if (accounts.length === 0) {
-              // handle this edge case by disconnecting
-              this.actions.reportError(undefined)
-            } else {
-              this.actions.update({ accounts })
-            }
-          })
-        }
-      }))
+  public async getProvider(): Promise<any> {
+    return window.ethereum
   }
 
-  /** {@inheritdoc Connector.connectEagerly} */
-  public async connectEagerly(): Promise<void> {
-    const cancelActivation = this.actions.startActivation()
+  public async getChainId(): Promise<number | string> {
+    if (!window.ethereum) {
+      throw new NoEthereumProviderError()
+    }
 
-    await this.isomorphicInitialize()
-    if (!this.provider) return cancelActivation()
+    let chainId
+    try {
+      chainId = await (window.ethereum.send as Send)('eth_chainId').then(parseSendReturn)
+    } catch {
+      warning(false, 'eth_chainId was unsuccessful, falling back to net_version')
+    }
 
-    return Promise.all([
-      this.provider.request({ method: 'eth_chainId' }) as Promise<string>,
-      this.provider.request({ method: 'eth_accounts' }) as Promise<string[]>,
-    ])
-      .then(([chainId, accounts]) => {
-        if (accounts.length) {
-          this.actions.update({ chainId: parseChainId(chainId), accounts })
+    if (!chainId) {
+      try {
+        chainId = await (window.ethereum.send as Send)('net_version').then(parseSendReturn)
+      } catch {
+        warning(false, 'net_version was unsuccessful, falling back to net version v2')
+      }
+    }
+
+    if (!chainId) {
+      try {
+        chainId = parseSendReturn((window.ethereum.send as SendOld)({ method: 'net_version' }))
+      } catch {
+        warning(false, 'net_version v2 was unsuccessful, falling back to manual matches and static properties')
+      }
+    }
+
+    if (!chainId) {
+      if ((window.ethereum as any).isDapper) {
+        chainId = parseSendReturn((window.ethereum as any).cachedResults.net_version)
+      } else {
+        chainId =
+          (window.ethereum as any).chainId ||
+          (window.ethereum as any).netVersion ||
+          (window.ethereum as any).networkVersion ||
+          (window.ethereum as any)._chainId
+      }
+    }
+
+    return chainId
+  }
+
+  public async getAccount(): Promise<null | string> {
+    if (!window.ethereum) {
+      throw new NoEthereumProviderError()
+    }
+
+    let account
+    try {
+      account = await (window.ethereum.send as Send)('eth_accounts').then(sendReturn => parseSendReturn(sendReturn)[0])
+    } catch {
+      warning(false, 'eth_accounts was unsuccessful, falling back to enable')
+    }
+
+    if (!account) {
+      try {
+        account = await window.ethereum.enable().then(sendReturn => parseSendReturn(sendReturn)[0])
+      } catch {
+        warning(false, 'enable was unsuccessful, falling back to eth_accounts v2')
+      }
+    }
+
+    if (!account) {
+      account = parseSendReturn((window.ethereum.send as SendOld)({ method: 'eth_accounts' }))[0]
+    }
+
+    return account
+  }
+
+  public deactivate() {
+    if (window.ethereum && window.ethereum.removeListener) {
+      window.ethereum.removeListener('chainChanged', this.handleChainChanged)
+      window.ethereum.removeListener('accountsChanged', this.handleAccountsChanged)
+      window.ethereum.removeListener('close', this.handleClose)
+      window.ethereum.removeListener('networkChanged', this.handleNetworkChanged)
+    }
+  }
+
+  public async isAuthorized(): Promise<boolean> {
+    if (!window.ethereum) {
+      return false
+    }
+
+    try {
+      return await (window.ethereum.send as Send)('eth_accounts').then(sendReturn => {
+        if (parseSendReturn(sendReturn).length > 0) {
+          return true
         } else {
-          throw new Error('No accounts returned')
+          return false
         }
       })
-      .catch((error) => {
-        console.debug('Could not connect eagerly', error)
-        cancelActivation()
-      })
-  }
-
-  /**
-   * Initiates a connection.
-   *
-   * @param desiredChainIdOrChainParameters - If defined, indicates the desired chain to connect to. If the user is
-   * already connected to this chain, no additional steps will be taken. Otherwise, the user will be prompted to switch
-   * to the chain, if one of two conditions is met: either they already have it added in their extension, or the
-   * argument is of type AddEthereumChainParameter, in which case the user will be prompted to add the chain with the
-   * specified parameters first, before being prompted to switch.
-   */
-
-
-
-
-
-  public async activate(desiredChainIdOrChainParameters?: number | AddEthereumChainParameter): Promise<void> {
-    if (!this.provider?.isConnected?.()) this.actions.startActivation()
-
-    await this.isomorphicInitialize()
-    if (!this.provider) {
-        return this.actions.reportError(new NoInfinityWalletError())
+    } catch {
+      return false
     }
-
-    return Promise.all([
-      this.provider.request({ method: 'eth_chainId' }) as Promise<string>,
-      this.provider.request({ method: 'eth_requestAccounts' }) as Promise<string[]>,
-    ])
-      .then(([chainId, accounts]) => {
-        const receivedChainId = parseChainId(chainId)
-        const desiredChainId =
-          typeof desiredChainIdOrChainParameters === 'number'
-            ? desiredChainIdOrChainParameters
-            : desiredChainIdOrChainParameters?.chainId
-
-        // if there's no desired chain, or it's equal to the received, update
-        if (!desiredChainId || receivedChainId === desiredChainId)
-          return this.actions.update({ chainId: receivedChainId, accounts })
-
-        const desiredChainIdHex = `0x${desiredChainId.toString(16)}`
-
-        // if we're here, we can try to switch networks
-        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-        return this.provider!.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: desiredChainIdHex }],
-        })
-          .catch((error: ProviderRpcError) => {
-            if (error.code === 4902 && typeof desiredChainIdOrChainParameters !== 'number') {
-              // if we're here, we can try to add a new network
-              // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-              return this.provider!.request({
-                method: 'wallet_addEthereumChain',
-                params: [{ ...desiredChainIdOrChainParameters, chainId: desiredChainIdHex }],
-              })
-            } else {
-              throw error
-            }
-          })
-          .then(() => this.activate(desiredChainId))
-      })
-      .catch((error: ProviderRpcError) => {
-        this.actions.reportError(error)
-      })
   }
 }

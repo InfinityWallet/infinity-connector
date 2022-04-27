@@ -1,7 +1,7 @@
 {
   "name": "@infinitywallet/infinity-connector",
   "description": "Infinity Wallet connection SDK for DApp web3 connect integration",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "homepage": "https://infinitywallet.io",
   "author": "Infinity Wallet",
   "keywords": [
@@ -34,7 +34,9 @@
     "start": "tsc --watch"
   },
   "dependencies": {
-    "@web3-react/types": "^6.0.7"
+    "@web3-react/abstract-connector": "^6.0.7",
+    "@web3-react/types": "^6.0.7",
+    "tiny-warning": "^1.0.3"
   },
   "license": "MIT"
 }

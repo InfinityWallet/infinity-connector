@@ -1,7 +1,7 @@
 "use strict";
 exports.__esModule = true;
 exports.openInfinityWallet = exports.detectEthereumProvider = void 0;
-var deep_link_1 = require("./src/deep-link");
+var deep_link_1 = require("./deep-link");
 /**
  * Returns a Promise that resolves to the value of window.ethereum if it is
  * set within the given timeout, or null.

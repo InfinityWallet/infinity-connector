@@ -1,6 +1,6 @@
-import { DeepLinker } from './src/deep-link'
+import { DeepLinker } from './deep-link'
 
-interface InfinityWalletEthereumProvider {
+export interface InfinityWalletProvider {
   isInfinityWallet?: boolean;
   once(eventName: string | symbol, listener: (...args: any[]) => void): this;
   on(eventName: string | symbol, listener: (...args: any[]) => void): this;
@@ -11,7 +11,7 @@ interface InfinityWalletEthereumProvider {
 }
 
 interface Window {
-  ethereum?: InfinityWalletEthereumProvider;
+  ethereum?: InfinityWalletProvider;
 }
 
 /**
@@ -30,7 +30,7 @@ interface Window {
  * @returns A Promise that resolves with the Provider if it is detected within
  * given timeout, otherwise null.
  */
-export function detectEthereumProvider<T = InfinityWalletEthereumProvider>({
+export function detectEthereumProvider<T = InfinityWalletProvider>({
   mustBeInfinityWallet = false,
   silent = false,
   timeout = 3000,

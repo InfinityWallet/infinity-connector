@@ -62,182 +62,264 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 exports.__esModule = true;
-exports.InfinityWallet = exports.NoInfinityWalletError = void 0;
-var types_1 = require("@web3-react/types");
-var NoInfinityWalletError = /** @class */ (function (_super) {
-    __extends(NoInfinityWalletError, _super);
-    function NoInfinityWalletError() {
-        var _this = _super.call(this, 'InfinityWallet not installed') || this;
-        _this.name = NoInfinityWalletError.name;
-        Object.setPrototypeOf(_this, NoInfinityWalletError.prototype);
-        return _this;
-    }
-    return NoInfinityWalletError;
-}(Error));
-exports.NoInfinityWalletError = NoInfinityWalletError;
-function parseChainId(chainId) {
-    return Number.parseInt(chainId, 16);
+exports.InfinityWalletConnector = exports.UserRejectedRequestError = exports.NoEthereumProviderError = void 0;
+var abstract_connector_1 = require("@web3-react/abstract-connector");
+var tiny_warning_1 = require("tiny-warning");
+function parseSendReturn(sendReturn) {
+    return sendReturn.hasOwnProperty('result') ? sendReturn.result : sendReturn;
 }
-var InfinityWallet = /** @class */ (function (_super) {
-    __extends(InfinityWallet, _super);
-    /**
-     * @param connectEagerly - A flag indicating whether connection should be initiated when the class is constructed.
-     * @param options - Options to pass to `@infinitywallet/detect-provider`
-     */
-    function InfinityWallet(actions, connectEagerly, options) {
-        if (connectEagerly === void 0) { connectEagerly = false; }
-        var _this = _super.call(this, actions) || this;
-        if (connectEagerly && typeof window === 'undefined') {
-            throw new Error('connectEagerly = true is invalid for SSR, instead use the connectEagerly method in a useEffect');
-        }
-        _this.options = options;
-        if (connectEagerly)
-            void _this.connectEagerly();
+var NoEthereumProviderError = /** @class */ (function (_super) {
+    __extends(NoEthereumProviderError, _super);
+    function NoEthereumProviderError() {
+        var _this = _super.call(this) || this;
+        _this.name = _this.constructor.name;
+        _this.message = 'No Ethereum provider was found on window.ethereum.';
         return _this;
     }
-    InfinityWallet.prototype.isomorphicInitialize = function () {
+    return NoEthereumProviderError;
+}(Error));
+exports.NoEthereumProviderError = NoEthereumProviderError;
+var UserRejectedRequestError = /** @class */ (function (_super) {
+    __extends(UserRejectedRequestError, _super);
+    function UserRejectedRequestError() {
+        var _this = _super.call(this) || this;
+        _this.name = _this.constructor.name;
+        _this.message = 'The user rejected the request.';
+        return _this;
+    }
+    return UserRejectedRequestError;
+}(Error));
+exports.UserRejectedRequestError = UserRejectedRequestError;
+var InfinityWalletConnector = /** @class */ (function (_super) {
+    __extends(InfinityWalletConnector, _super);
+    function InfinityWalletConnector(kwargs) {
+        var _this = _super.call(this, kwargs) || this;
+        _this.isInfinityWallet = true;
+        _this.handleNetworkChanged = _this.handleNetworkChanged.bind(_this);
+        _this.handleChainChanged = _this.handleChainChanged.bind(_this);
+        _this.handleAccountsChanged = _this.handleAccountsChanged.bind(_this);
+        _this.handleClose = _this.handleClose.bind(_this);
+        return _this;
+    }
+    InfinityWalletConnector.prototype.handleChainChanged = function (chainId) {
+        if (__DEV__) {
+            console.log("Handling 'chainChanged' event with payload", chainId);
+        }
+        this.emitUpdate({ chainId: chainId, provider: window.ethereum });
+    };
+    InfinityWalletConnector.prototype.handleAccountsChanged = function (accounts) {
+        if (__DEV__) {
+            console.log("Handling 'accountsChanged' event with payload", accounts);
+        }
+        if (accounts.length === 0) {
+            this.emitDeactivate();
+        }
+        else {
+            this.emitUpdate({ account: accounts[0] });
+        }
+    };
+    InfinityWalletConnector.prototype.handleClose = function (code, reason) {
+        if (__DEV__) {
+            console.log("Handling 'close' event with payload", code, reason);
+        }
+        this.emitDeactivate();
+    };
+    InfinityWalletConnector.prototype.handleNetworkChanged = function (networkId) {
+        if (__DEV__) {
+            console.log("Handling 'networkChanged' event with payload", networkId);
+        }
+        this.emitUpdate({ chainId: networkId, provider: window.ethereum });
+    };
+    InfinityWalletConnector.prototype.activate = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _this = this;
+            var account, error_1;
             return __generator(this, function (_a) {
                 switch (_a.label) {
                     case 0:
-                        if (this.eagerConnection)
-                            return [2 /*return*/, this.eagerConnection];
-                        return [4 /*yield*/, (this.eagerConnection = Promise.resolve().then(function () { return require('@infinitywallet/detect-provider'); }).then(function (m) { return m["default"](_this.options); })
-                                .then(function (provider) {
-                                var _a, _b;
-                                if (provider) {
-                                    _this.provider = provider;
-                                    // edge case if e.g. infinitywallet and coinbase wallet are both installed
-                                    if ((_a = _this.provider.providers) === null || _a === void 0 ? void 0 : _a.length) {
-                                        _this.provider = (_b = _this.provider.providers.find(function (p) { return p.isInfinityWallet; })) !== null && _b !== void 0 ? _b : _this.provider.providers[0];
-                                    }
-                                    _this.provider.on('connect', function (_a) {
-                                        var chainId = _a.chainId;
-                                        _this.actions.update({ chainId: parseChainId(chainId) });
-                                    });
-                                    _this.provider.on('disconnect', function (error) {
-                                        _this.actions.reportError(error);
-                                    });
-                                    _this.provider.on('chainChanged', function (chainId) {
-                                        _this.actions.update({ chainId: parseChainId(chainId) });
-                                    });
-                                    _this.provider.on('accountsChanged', function (accounts) {
-                                        if (accounts.length === 0) {
-                                            // handle this edge case by disconnecting
-                                            _this.actions.reportError(undefined);
-                                        }
-                                        else {
-                                            _this.actions.update({ accounts: accounts });
-                                        }
-                                    });
-                                }
-                            }))];
+                        if (!window.ethereum) {
+                            throw new NoEthereumProviderError();
+                        }
+                        if (window.ethereum.on) {
+                            window.ethereum.on('chainChanged', this.handleChainChanged);
+                            window.ethereum.on('accountsChanged', this.handleAccountsChanged);
+                            window.ethereum.on('close', this.handleClose);
+                            window.ethereum.on('networkChanged', this.handleNetworkChanged);
+                        }
+                        if (window.ethereum.isInfinityWallet) {
+                            ;
+                            window.ethereum.autoRefreshOnNetworkChange = false;
+                        }
+                        _a.label = 1;
                     case 1:
-                        _a.sent();
-                        return [2 /*return*/];
+                        _a.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, window.ethereum.send('eth_requestAccounts').then(function (sendReturn) { return parseSendReturn(sendReturn)[0]; })];
+                    case 2:
+                        account = _a.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        error_1 = _a.sent();
+                        if (error_1.code === 4001) {
+                            throw new UserRejectedRequestError();
+                        }
+                        (0, tiny_warning_1["default"])(false, 'eth_requestAccounts was unsuccessful, falling back to enable');
+                        return [3 /*break*/, 4];
+                    case 4:
+                        if (!!account) return [3 /*break*/, 6];
+                        return [4 /*yield*/, window.ethereum.enable().then(function (sendReturn) { return sendReturn && parseSendReturn(sendReturn)[0]; })];
+                    case 5:
+                        // if enable is successful but doesn't return accounts, fall back to getAccount (not happy i have to do this...)
+                        account = _a.sent();
+                        _a.label = 6;
+                    case 6: return [2 /*return*/, __assign({ provider: window.ethereum }, (account ? { account: account } : {}))];
                 }
             });
         });
     };
-    /** {@inheritdoc Connector.connectEagerly} */
-    InfinityWallet.prototype.connectEagerly = function () {
+    InfinityWalletConnector.prototype.getProvider = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var cancelActivation;
-            var _this = this;
             return __generator(this, function (_a) {
-                switch (_a.label) {
-                    case 0:
-                        cancelActivation = this.actions.startActivation();
-                        return [4 /*yield*/, this.isomorphicInitialize()];
-                    case 1:
-                        _a.sent();
-                        if (!this.provider)
-                            return [2 /*return*/, cancelActivation()];
-                        return [2 /*return*/, Promise.all([
-                                this.provider.request({ method: 'eth_chainId' }),
-                                this.provider.request({ method: 'eth_accounts' }),
-                            ])
-                                .then(function (_a) {
-                                var chainId = _a[0], accounts = _a[1];
-                                if (accounts.length) {
-                                    _this.actions.update({ chainId: parseChainId(chainId), accounts: accounts });
-                                }
-                                else {
-                                    throw new Error('No accounts returned');
-                                }
-                            })["catch"](function (error) {
-                                console.debug('Could not connect eagerly', error);
-                                cancelActivation();
-                            })];
-                }
+                return [2 /*return*/, window.ethereum];
             });
         });
     };
-    /**
-     * Initiates a connection.
-     *
-     * @param desiredChainIdOrChainParameters - If defined, indicates the desired chain to connect to. If the user is
-     * already connected to this chain, no additional steps will be taken. Otherwise, the user will be prompted to switch
-     * to the chain, if one of two conditions is met: either they already have it added in their extension, or the
-     * argument is of type AddEthereumChainParameter, in which case the user will be prompted to add the chain with the
-     * specified parameters first, before being prompted to switch.
-     */
-    InfinityWallet.prototype.activate = function (desiredChainIdOrChainParameters) {
-        var _a, _b;
+    InfinityWalletConnector.prototype.getChainId = function () {
         return __awaiter(this, void 0, void 0, function () {
-            var _this = this;
+            var chainId, _a, _b;
             return __generator(this, function (_c) {
                 switch (_c.label) {
                     case 0:
-                        if (!((_b = (_a = this.provider) === null || _a === void 0 ? void 0 : _a.isConnected) === null || _b === void 0 ? void 0 : _b.call(_a)))
-                            this.actions.startActivation();
-                        return [4 /*yield*/, this.isomorphicInitialize()];
-                    case 1:
-                        _c.sent();
-                        if (!this.provider) {
-                            return [2 /*return*/, this.actions.reportError(new NoInfinityWalletError())];
+                        if (!window.ethereum) {
+                            throw new NoEthereumProviderError();
                         }
-                        return [2 /*return*/, Promise.all([
-                                this.provider.request({ method: 'eth_chainId' }),
-                                this.provider.request({ method: 'eth_requestAccounts' }),
-                            ])
-                                .then(function (_a) {
-                                var chainId = _a[0], accounts = _a[1];
-                                var receivedChainId = parseChainId(chainId);
-                                var desiredChainId = typeof desiredChainIdOrChainParameters === 'number'
-                                    ? desiredChainIdOrChainParameters
-                                    : desiredChainIdOrChainParameters === null || desiredChainIdOrChainParameters === void 0 ? void 0 : desiredChainIdOrChainParameters.chainId;
-                                // if there's no desired chain, or it's equal to the received, update
-                                if (!desiredChainId || receivedChainId === desiredChainId)
-                                    return _this.actions.update({ chainId: receivedChainId, accounts: accounts });
-                                var desiredChainIdHex = "0x".concat(desiredChainId.toString(16));
-                                // if we're here, we can try to switch networks
-                                // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                return _this.provider.request({
-                                    method: 'wallet_switchEthereumChain',
-                                    params: [{ chainId: desiredChainIdHex }]
-                                })["catch"](function (error) {
-                                    if (error.code === 4902 && typeof desiredChainIdOrChainParameters !== 'number') {
-                                        // if we're here, we can try to add a new network
-                                        // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-                                        return _this.provider.request({
-                                            method: 'wallet_addEthereumChain',
-                                            params: [__assign(__assign({}, desiredChainIdOrChainParameters), { chainId: desiredChainIdHex })]
-                                        });
-                                    }
-                                    else {
-                                        throw error;
-                                    }
-                                })
-                                    .then(function () { return _this.activate(desiredChainId); });
-                            })["catch"](function (error) {
-                                _this.actions.reportError(error);
-                            })];
+                        _c.label = 1;
+                    case 1:
+                        _c.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, window.ethereum.send('eth_chainId').then(parseSendReturn)];
+                    case 2:
+                        chainId = _c.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        _a = _c.sent();
+                        (0, tiny_warning_1["default"])(false, 'eth_chainId was unsuccessful, falling back to net_version');
+                        return [3 /*break*/, 4];
+                    case 4:
+                        if (!!chainId) return [3 /*break*/, 8];
+                        _c.label = 5;
+                    case 5:
+                        _c.trys.push([5, 7, , 8]);
+                        return [4 /*yield*/, window.ethereum.send('net_version').then(parseSendReturn)];
+                    case 6:
+                        chainId = _c.sent();
+                        return [3 /*break*/, 8];
+                    case 7:
+                        _b = _c.sent();
+                        (0, tiny_warning_1["default"])(false, 'net_version was unsuccessful, falling back to net version v2');
+                        return [3 /*break*/, 8];
+                    case 8:
+                        if (!chainId) {
+                            try {
+                                chainId = parseSendReturn(window.ethereum.send({ method: 'net_version' }));
+                            }
+                            catch (_d) {
+                                (0, tiny_warning_1["default"])(false, 'net_version v2 was unsuccessful, falling back to manual matches and static properties');
+                            }
+                        }
+                        if (!chainId) {
+                            if (window.ethereum.isDapper) {
+                                chainId = parseSendReturn(window.ethereum.cachedResults.net_version);
+                            }
+                            else {
+                                chainId =
+                                    window.ethereum.chainId ||
+                                        window.ethereum.netVersion ||
+                                        window.ethereum.networkVersion ||
+                                        window.ethereum._chainId;
+                            }
+                        }
+                        return [2 /*return*/, chainId];
                 }
             });
         });
     };
-    return InfinityWallet;
-}(types_1.Connector));
-exports.InfinityWallet = InfinityWallet;
+    InfinityWalletConnector.prototype.getAccount = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var account, _a, _b;
+            return __generator(this, function (_c) {
+                switch (_c.label) {
+                    case 0:
+                        if (!window.ethereum) {
+                            throw new NoEthereumProviderError();
+                        }
+                        _c.label = 1;
+                    case 1:
+                        _c.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, window.ethereum.send('eth_accounts').then(function (sendReturn) { return parseSendReturn(sendReturn)[0]; })];
+                    case 2:
+                        account = _c.sent();
+                        return [3 /*break*/, 4];
+                    case 3:
+                        _a = _c.sent();
+                        (0, tiny_warning_1["default"])(false, 'eth_accounts was unsuccessful, falling back to enable');
+                        return [3 /*break*/, 4];
+                    case 4:
+                        if (!!account) return [3 /*break*/, 8];
+                        _c.label = 5;
+                    case 5:
+                        _c.trys.push([5, 7, , 8]);
+                        return [4 /*yield*/, window.ethereum.enable().then(function (sendReturn) { return parseSendReturn(sendReturn)[0]; })];
+                    case 6:
+                        account = _c.sent();
+                        return [3 /*break*/, 8];
+                    case 7:
+                        _b = _c.sent();
+                        (0, tiny_warning_1["default"])(false, 'enable was unsuccessful, falling back to eth_accounts v2');
+                        return [3 /*break*/, 8];
+                    case 8:
+                        if (!account) {
+                            account = parseSendReturn(window.ethereum.send({ method: 'eth_accounts' }))[0];
+                        }
+                        return [2 /*return*/, account];
+                }
+            });
+        });
+    };
+    InfinityWalletConnector.prototype.deactivate = function () {
+        if (window.ethereum && window.ethereum.removeListener) {
+            window.ethereum.removeListener('chainChanged', this.handleChainChanged);
+            window.ethereum.removeListener('accountsChanged', this.handleAccountsChanged);
+            window.ethereum.removeListener('close', this.handleClose);
+            window.ethereum.removeListener('networkChanged', this.handleNetworkChanged);
+        }
+    };
+    InfinityWalletConnector.prototype.isAuthorized = function () {
+        return __awaiter(this, void 0, void 0, function () {
+            var _a;
+            return __generator(this, function (_b) {
+                switch (_b.label) {
+                    case 0:
+                        if (!window.ethereum) {
+                            return [2 /*return*/, false];
+                        }
+                        _b.label = 1;
+                    case 1:
+                        _b.trys.push([1, 3, , 4]);
+                        return [4 /*yield*/, window.ethereum.send('eth_accounts').then(function (sendReturn) {
+                                if (parseSendReturn(sendReturn).length > 0) {
+                                    return true;
+                                }
+                                else {
+                                    return false;
+                                }
+                            })];
+                    case 2: return [2 /*return*/, _b.sent()];
+                    case 3:
+                        _a = _b.sent();
+                        return [2 /*return*/, false];
+                    case 4: return [2 /*return*/];
+                }
+            });
+        });
+    };
+    return InfinityWalletConnector;
+}(abstract_connector_1.AbstractConnector));
+exports.InfinityWalletConnector = InfinityWalletConnector;
