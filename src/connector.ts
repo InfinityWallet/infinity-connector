@@ -1,7 +1,7 @@
 import type {
   detectEthereumProvider,
   openInfinityWallet
-} from './detect-provider'
+} from './src/detect-provider'
 import type {
   Actions,
   AddEthereumChainParameter,
@@ -36,7 +36,7 @@ export class InfinityWallet extends Connector {
 
   /**
    * @param connectEagerly - A flag indicating whether connection should be initiated when the class is constructed.
-   * @param options - Options to pass to `@infinitywallet/infinity-connector`
+   * @param options - Options to pass to `@infinitywallet/detect-provider`
    */
   constructor(actions: Actions, connectEagerly = false, options?: Parameters<typeof detectEthereumProvider>[0]) {
     super(actions)
@@ -53,7 +53,7 @@ export class InfinityWallet extends Connector {
   private async isomorphicInitialize(): Promise<void> {
     if (this.eagerConnection) return this.eagerConnection
 
-    await (this.eagerConnection = import('@infinitywallet/infinity-connector')
+    await (this.eagerConnection = import('@infinitywallet/detect-provider')
       .then((m) => m.default(this.options))
       .then((provider) => {
         if (provider) {

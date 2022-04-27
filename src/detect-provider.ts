@@ -1,4 +1,4 @@
-import { DeepLinker } from './deep-linker'
+import { DeepLinker } from './src/deep-link'
 
 interface InfinityWalletEthereumProvider {
   isInfinityWallet?: boolean;
@@ -77,7 +77,7 @@ export function detectEthereumProvider<T = InfinityWalletEthereumProvider>({
           ? 'Non-InfinityWallet window.ethereum detected.'
           : 'Unable to detect window.ethereum.';
 
-        !silent && console.error('@InfinityWallet/infinity-connector:', message);
+        !silent && console.error('@InfinityWallet/detect-provider:', message);
         resolve(null);
       }
     }
@@ -85,13 +85,13 @@ export function detectEthereumProvider<T = InfinityWalletEthereumProvider>({
 
   function _validateInputs() {
     if (typeof mustBeInfinityWallet !== 'boolean') {
-      throw new Error(`@InfinityWallet/infinity-connector: Expected option 'mustBeInfinityWallet' to be a boolean.`);
+      throw new Error(`@InfinityWallet/detect-provider: Expected option 'mustBeInfinityWallet' to be a boolean.`);
     }
     if (typeof silent !== 'boolean') {
-      throw new Error(`@InfinityWallet/infinity-connector: Expected option 'silent' to be a boolean.`);
+      throw new Error(`@InfinityWallet/detect-provider: Expected option 'silent' to be a boolean.`);
     }
     if (typeof timeout !== 'number') {
-      throw new Error(`@InfinityWallet/infinity-connector: Expected option 'timeout' to be a number.`);
+      throw new Error(`@InfinityWallet/detect-provider: Expected option 'timeout' to be a number.`);
     }
   }
 }
