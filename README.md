@@ -46,7 +46,7 @@ The first thing you are going to need to do is detect whether your DApp is being
 window.ethereum && window.ethereum?.isInfinityWallet
 ```
 
-If returns **TRUE** then the DApp is currently running within the Infinity Wallet, you can initialize the wallet connection with [Initiate Connector](./README.md#initiate-connector) followed by calling the web3 method [Activate](./README.md#activate)
+If returns **TRUE** then the DApp is currently running within the Infinity Wallet, you can initialize the wallet connection with [Initiate Connector](./README.md#initiate-connector) followed by calling the web3 method [Activate](./README.md#activate-connection)
 
 If returns **FALSE** then it means the Infinity Wallet needs to be opened using Open Infinity Wallet function;
 
