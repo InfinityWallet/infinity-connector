@@ -1,7 +1,7 @@
 {
   "name": "@infinitywallet/infinity-connector",
   "description": "Infinity Wallet connection SDK for DApp web3 connect integration",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "homepage": "https://infinitywallet.io",
   "author": "Infinity Wallet",
   "keywords": [

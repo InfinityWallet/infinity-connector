@@ -13,7 +13,7 @@
 ## How to add Infinity Wallet connecting to a DApp?
 To integrate Infinity Wallet connecting to your DApp please follow this [Integration Guide](./README.md#integration-guide).
 
-You will need to add to your interface an option to connect with the Infinity Wallet either with the Infinity Wallet logo or Infinity Wallet logo + text. As an example:
+You will need to add to your interface an option to connect with the Infinity Wallet, either with the Infinity Wallet logo or Infinity Wallet logo + text. As an example:
 
 ![Connect Wallet UI Example](https://i.imgur.com/hzRpUSy.png)
 
