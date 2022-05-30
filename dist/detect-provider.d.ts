@@ -34,5 +34,6 @@ export declare function detectEthereumProvider<T = InfinityWalletProvider>({ mus
  * not installed, it will go to wallet's download page.
  *
  * @param hostname - Hostname of the dapp.
+ * @param chain - The chain that you want the wallet to connect yo
  */
-export declare function openInfinityWallet(hostname: any): void;
+export declare function openInfinityWallet(hostname: any, chain: any): void;

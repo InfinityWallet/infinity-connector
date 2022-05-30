@@ -71,18 +71,18 @@ activate(infinitywalletConnector)
 ### Open Infinity Wallet
 This function should be called when [Detect Infinity Wallet](./README.md#detect-infinity-wallet) Wallet returns **FALSE**.
 
-By calling this function and passing your DApp url (replace **"YOUR_DAPP_URL"**) it will open your DApp in the Infinity Wallet if the user has the Infinity Wallet installed. If the user does not have Infinity Wallet installed it will redirect them to download the Infinity Wallet.
+By calling this function and passing your DApp url (replace **"YOUR_DAPP_URL"**) and Chain ID (replace **"CHAIN_ID"**) it will open your DApp in the Infinity Wallet if the user has the Infinity Wallet installed. If the user does not have Infinity Wallet installed it will redirect them to download the Infinity Wallet.
 ```js
 import { openInfinityWallet } from '@infinitywallet/infinity-connector';
 
-openInfinityWallet(“YOUR_DAPP_URL”);
+openInfinityWallet(YOUR_DAPP_URL, CHAIN_ID);
 ```
 ## Example
 The following is an example on how to use the SDK to detect, connect and open the Infinity Wallet to connect with a DApp.
 
 Using this example make sure to replace the following:
 
-- **CHAIN_ID** replace with the ID of the chain you are usin. As an example if your DApp is using Ethereum then the CHAIN_ID would be [1];
+- **CHAIN_ID** replace with the ID of the chain you are using. As an example if your DApp is using Ethereum then the CHAIN_ID would be 1 or if using Binance Smart Chain it would set CHAIN_ID to 56;
 - **YOUR_DAPP_URL** replace this with the URL of your DApp;
 
 ```js
@@ -98,7 +98,7 @@ if(window.ethereum && window.ethereum?.isInfinityWallet){
      activate(infinitywalletConnector);
      console.log('Infinity Wallet is connected and can be used with the DApp');
 } else {
-     openInfinityWallet(“YOUR_DAPP_URL”);
-     console.log('Open DApp in Infinity Wallet if installed, or if not installed will redirect to download Infinity Wallet');
+     openInfinityWallet(YOUR_DAPP_URL, CHAIN_ID);
+     console.log('Open DApp on a specific chain in Infinity Wallet if installed, or if not installed it will redirect to download Infinity Wallet');
 }
 ```

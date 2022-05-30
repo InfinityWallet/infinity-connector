@@ -70,15 +70,18 @@ exports.detectEthereumProvider = detectEthereumProvider;
  * not installed, it will go to wallet's download page.
  *
  * @param hostname - Hostname of the dapp.
+ * @param chain - The chain that you want the wallet to connect yo
  */
-function openInfinityWallet(hostname) {
+function openInfinityWallet(hostname, chain) {
     var linker = new deep_link_1.DeepLinker({
         onIgnored: function () {
             window.open("https://infinitywallet.io/download");
         }
     });
+    if (chain == undefined)
+        chain = 1;
     if (hostname.includes('://'))
         hostname = hostname.split('://')[1];
-    linker.openURL("infinity:?dapp=" + hostname);
+    linker.openURL("infinity:?dapp=" + hostname + "&chain=" + chain);
 }
 exports.openInfinityWallet = openInfinityWallet;

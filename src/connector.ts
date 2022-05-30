@@ -7,6 +7,7 @@ import { SendReturnResult, SendReturn, Send, SendOld } from './types'
 function parseSendReturn(sendReturn: SendReturnResult | SendReturn): any {
   return sendReturn.hasOwnProperty('result') ? sendReturn.result : sendReturn
 }
+const __DEV__ = false
 
 export class NoEthereumProviderError extends Error {
   public constructor() {

@@ -68,6 +68,7 @@ var tiny_warning_1 = require("tiny-warning");
 function parseSendReturn(sendReturn) {
     return sendReturn.hasOwnProperty('result') ? sendReturn.result : sendReturn;
 }
+var __DEV__ = false;
 var NoEthereumProviderError = /** @class */ (function (_super) {
     __extends(NoEthereumProviderError, _super);
     function NoEthereumProviderError() {
