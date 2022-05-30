@@ -10,6 +10,9 @@
 </div>
 <br/>
 
+## Free Promotion
+If you integrate the Infinity Connector and make a tweet tagging @infinitywallet on Twitter regarding your support for Infinity Wallet connecting, we may retweet your tweet.
+
 ## How to add Infinity Wallet connecting to a DApp?
 To integrate Infinity Wallet connecting to your DApp please follow this [Integration Guide](./README.md#integration-guide).
 
