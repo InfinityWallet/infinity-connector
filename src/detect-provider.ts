@@ -115,5 +115,6 @@ export function openInfinityWallet(hostname,chain){
     chain = 1
 	if(hostname.includes('://'))
 		hostname = hostname.split('://')[1]
-    linker.openURL("infinity:?dapp="+hostname+"&chain="+chain);
+  hostname = encodeURIComponent(hostname)
+  linker.openURL("infinity:?dapp="+hostname+"&chain="+chain);
 }
